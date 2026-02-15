@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ReportCategory {
+  HARASSMENT
+  CORRUPTION
+  ACADEMIC
+  OTHER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReportStatus {
+  NEW
+  IN_REVIEW
+  RESOLVED
+
+  /// ✅ NEW: Emergency escalation state
+  ESCALATED
+}
+
+enum MessageSender {
+  REPORTER
+  ADMIN
+}
+
+/// ✅ NEW: who triggered an audit event
+enum AuditActor {
+  ADMIN
+  SYSTEM
+}
+
+/// ✅ NEW: what happened
+enum AuditAction {
+  ESCALATE
+  UNLOCK
+  LOCK
+  UNLOCK_THREAD
+}
+
+model Report {
+  id               String         @id @default(cuid())
+  category         ReportCategory
+  encryptedContent String
+  riskLevel        RiskLevel      @default(LOW)
+
+  /// ✅ human-readable reasons for why riskLevel is what it is (stored as JSON string)
+  riskReasonsJson  String         @default("[]")
+
+  status           ReportStatus   @default(NEW)
+  trackingHash     String         @unique
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  /// ✅ NEW: Lockdown mode fields
+  isLocked         Boolean        @default(false)
+  lockedAt         DateTime?
+  escalatedAt      DateTime?
+
+  /// ✅ opposite relations
+  messages         ReportMessage[]
+  attachments      ReportAttachment[]
+  audits           AuditEvent[]
+}
+
+model ReportMessage {
+  id               String        @id @default(cuid())
+  reportId          String
+  report            Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  sender            MessageSender @default(REPORTER)
+  encryptedContent  String
+  createdAt         DateTime      @default(now())
+
+  /// ✅ attachments linked to this message (optional)
+  attachments       ReportAttachment[]
+
+  @@index([reportId, createdAt])
+}
+
+model ReportAttachment {
+  id           String        @id @default(cuid())
+
+  reportId     String
+  report       Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  /// optional link to a specific message in thread
+  messageId    String?
+  message      ReportMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  uploader     MessageSender @default(REPORTER)
+
+  originalName String
+  mimeType     String
+  size         Int
+  sha256       String
+
+  /// file stored encrypted on disk; this is the server path
+  storagePath  String
+
+  createdAt    DateTime      @default(now())
+
+  @@index([reportId, createdAt])
+  @@index([messageId])
+}
+
+/// ✅ NEW: immutable audit log for escalations/locks/unlocks
+model AuditEvent {
+  id          String      @id @default(cuid())
+  reportId    String
+  report      Report      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  actor       AuditActor
+  action      AuditAction
+  detailsJson String      @default("{}")
+
+  createdAt   DateTime    @default(now())
+
+  @@index([reportId, createdAt])
+}
