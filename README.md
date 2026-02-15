@@ -97,7 +97,6 @@ ADMIN_SECRET="your-admin-secret"
 ENCRYPTION_KEY="your-32-byte-encryption-key"
 ```
 
-⚠️ Never commit `.env` to GitHub.
 
 ---
 
@@ -144,7 +143,6 @@ Authentication is handled using secure HTTP-only cookies.
 
 Admin credentials and encryption secrets must be configured inside `.env`.
 
-🚨 Secrets are never hardcoded inside the repository.
 
 ---
 
@@ -171,7 +169,6 @@ Screenshots of the landing page, submission form, and admin console are availabl
 * Admin-only protected routes
 * Encryption applied before database storage
 * Database file excluded from repository
-* `.env` ignored via `.gitignore`
 * No sensitive credentials committed
 
 ---
