@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# Database
+*.db
+prisma/dev.db
+dev.db
+
+
 # next.js
 /.next/
 /out/
